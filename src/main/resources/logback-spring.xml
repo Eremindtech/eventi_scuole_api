@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+	<property name="log_name" value="app_eventi" />
+	<property name="log_root" value="app_eventi_root" />
+	
+	
+	<appender name="MAIN_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${LOG_PATH}/${log_name}.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- rollover daily -->
+      <fileNamePattern>${LOG_PATH}/${log_name}-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+       
+       <maxFileSize>100MB</maxFileSize>    
+       <maxHistory>10</maxHistory>
+       <totalSizeCap>1GB</totalSizeCap>
+    </rollingPolicy>		
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+
+	<appender name="ROOT_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${LOG_PATH}/${log_root}.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- rollover daily -->
+      <fileNamePattern>${LOG_PATH}/${log_root}-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+       
+       <maxFileSize>100MB</maxFileSize>    
+       <maxHistory>10</maxHistory>
+       <totalSizeCap>1GB</totalSizeCap>
+    </rollingPolicy>		
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<root level="debug">
+    	<appender-ref ref="ROOT_APP" />
+  	</root>	
+
+	<logger name="it" level="debug" additivity="false">
+		<appender-ref ref="MAIN_APP" />
+	</logger>
+
+
+</configuration>
