@@ -17,7 +17,7 @@ public class ErmAuthentication extends JwtAuthenticationToken {
 	private User user;
 	
 	public ErmAuthentication(Jwt jwt, Collection<? extends GrantedAuthority> authorities, User user) {
-		super(jwt, authorities, user.getIdUser());
+		super(jwt, authorities, user.getUsername());
 		this.user=user;
 	}
 	

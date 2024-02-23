@@ -15,6 +15,7 @@ import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -32,20 +33,41 @@ import com.fasterxml.uuid.impl.TimeBasedGenerator;
 import com.mysql.cj.jdbc.AbandonedConnectionCleanupThread;
 import com.zaxxer.hikari.HikariDataSource;
 
+import it.eremind.progetto_scuole.app_eventi.api.util.Utils;
+import lombok.Getter;
+
 
 @Order(0)
 @Configuration
+@Getter
 public class AppConfig {
 
 	
 	private static final Logger logger = LoggerFactory.getLogger(AppConfig.class);
 
-	private HikariDataSource hds;	
-	
+	@Value("${springdoc.api-docs.path:/api-docs}")
+	public String apiDocsPath;
+
+	public static final String AUTH_PATH="/auth";
+	public static final String APP_PATH="/eventi";
+
 	public final static String DATE_TIME_SWAGGER="2022-03-15 12:30:22";
 	public static final String DATE_TIME_FORMAT="yyyy-MM-dd HH:mm:ss";
 
-	
+
+	@Value("${cfgDir:cfg}")
+	private String cfgDir;
+	private String jwkSetFilename="hrv-full-jwk-set.json";
+	private String jwkKeyID="hrv-1";
+
+
+
+	@PostConstruct
+	public void pc(){
+		logger.info("pc: cfgDir="+cfgDir+", AUTH_PATH="+AUTH_PATH+", APP_PATH="+APP_PATH+", apiDocsPath="+apiDocsPath
+			+", jwkSetFilename="+jwkSetFilename);
+	}
+
 	
 	@Bean
 	public PasswordEncoder passwordEncoder() {

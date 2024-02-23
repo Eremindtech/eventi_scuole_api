@@ -29,7 +29,6 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import com.fasterxml.uuid.impl.TimeBasedGenerator;
 import com.nimbusds.jose.JOSEException;
@@ -39,10 +38,11 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTClaimsSet.Builder;
-import com.nimbusds.jwt.SignedJWT;
 
-import it.orobicalab.hrv.web.dao.UserRepo;
-import it.orobicalab.hrv.web.model.db.User;
+import it.eremind.progetto_scuole.app_eventi.api.entity.User;
+import it.eremind.progetto_scuole.app_eventi.api.repository.UserRepository;
+
+import com.nimbusds.jwt.SignedJWT;
 
 
 
@@ -66,7 +66,7 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 	private int maxAuthErrors;	
 	
 	@Autowired
-	private UserRepo userRepo;	
+	private UserRepository userRepo;	
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;			
@@ -76,24 +76,17 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 	private JwtDecoder jwtDecoder;
 	
 	
-    @Value("${spring.profiles.active:}")
-    private String activeProfiles;
-    private String profile;
-	
-	
 	public SecMgr(RSAKey rsaJWK) {	
 		this.rsaJWK=rsaJWK;
 		this.algo=(JWSAlgorithm) rsaJWK.getAlgorithm();
 		if (this.algo==null) {
 			this.algo=JWSAlgorithm.RS256;
 		}
-		this.profile=StringUtils.hasText(activeProfiles)?activeProfiles.split(";")[0]:"";
 	}
 	
 	
 	@PostConstruct
 	void init() {
-		System.out.println("SecMgr: init: tokenValiditySecs:"+tokenValiditySecs);
 		logger.info("init: tokenValiditySecs:"+tokenValiditySecs+", refreshTokenValiditySecs="+this.refreshTokenValiditySecs);
 	}
 	
@@ -104,12 +97,12 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 	
 	
 	
-	public SignedJWT generateClientToken(User user, String clientType) throws JOSEException {
+	public SignedJWT generateClientToken(User user) throws JOSEException {
 		
 		String logPrefix="generateClientToken: ";
 		
-		String userId=user.getIdUser();
-		logger.debug(logPrefix+"userId="+userId+", clientType="+clientType);
+		String userId=user.getUsername();
+		logger.debug(logPrefix+"username="+userId);
 		
 		// Create HMAC signer
 		RSASSASigner signer = new RSASSASigner(rsaJWK);
@@ -129,7 +122,6 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
         .expirationTime(expDate)
         .jwtID(clientTokenId)
         .issuer(issuerUri)
-        .claim("client_type", clientType)
         .claim("refresh", "false");
 
 		
@@ -146,11 +138,11 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 	}
 	
 	
-	public SignedJWT generateRefreshToken(User user, String clientType) throws JOSEException {
+	public SignedJWT generateRefreshToken(User user) throws JOSEException {
 		
 		String logPrefix="generateRefreshToken: ";
-		String userId=user.getIdUser();
-		logger.debug(logPrefix+"userId="+userId+", clientType="+clientType);
+		String userId=user.getUsername();
+		logger.debug(logPrefix+"username="+userId);
 		
 		// Create HMAC signer
 		RSASSASigner signer = new RSASSASigner(rsaJWK);
@@ -170,7 +162,6 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
         .expirationTime(expDate)
         .jwtID(clientTokenId)
         .issuer(issuerUri)
-        .claim("client_type", clientType)
         .claim("refresh", "true");
 		
 		SignedJWT signedJWT = new SignedJWT(
@@ -191,7 +182,7 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 	 * @param refreshToken
 	 * @return
 	 */
-	public HrvAuthentication refreshAuth(String refreshToken){
+	public ErmAuthentication refreshAuth(String refreshToken){
 		try{
 			Jwt refreshJwt=this.jwtDecoder.decode(refreshToken);
 			return this.convert(refreshJwt);
@@ -235,7 +226,7 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 	
 
 	@Override
-	public HrvAuthentication convert(Jwt jwt) {
+	public ErmAuthentication convert(Jwt jwt) {
 		
 		String logPrefix="convert:";
 		final String subject = jwt.getSubject();
@@ -265,77 +256,44 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 			gaList.add(gaa);
 		}
 		else{
-			if (User.CLIENT_TYPE_APP.equals(clType)) {
-				final SimpleGrantedAuthority gaa=new SimpleGrantedAuthority("ROLE_APP"); 
-				gaList.add(gaa);
-				if(!"prod".equals(profile)){
-					// Consente all'app di inserire dei trades per testing
-					final SimpleGrantedAuthority ta=new SimpleGrantedAuthority("ROLE_TWS"); 
-					gaList.add(ta);
-				}
-			}
-			else if (User.CLIENT_TYPE_TWS.equals(clType)) {
-				final SimpleGrantedAuthority gaa=new SimpleGrantedAuthority("ROLE_TWS"); 
-				gaList.add(gaa);
-			}
-			else{
-				logger.warn(logPrefix+" Unexpected clientType="+clType);
-				final SimpleGrantedAuthority ga=new SimpleGrantedAuthority("ROLE_CLIENT"); 
-				gaList.add(ga);		
-			}
+			final SimpleGrantedAuthority gaa=new SimpleGrantedAuthority("ROLE_APP"); 
+			gaList.add(gaa);
 		}
-		//logger.debug(logPrefix+", profile="+profile+", gaList=", gaList);
-		return new HrvAuthentication(jwt, gaList, user);
+		return new ErmAuthentication(jwt, gaList, user);
 	
 	}
 
 	/**
 	 * User login
-	 * @param userId
+	 * @param username
 	 * @param password
 	 * @return
 	 */
 	@Transactional
-	public User auth(String userId, String password) { 
+	public User auth(String username, String password) { 
 		
 		String logPrefix="auth:";
-		logger.info(logPrefix+"userId="+userId);
+		logger.info(logPrefix+"username="+username);
 		User user=null;
 
 		try {
 			
-			user=loadUser(userId);
+			user=loadUser(username);
 	
 			boolean invalidCredentials=user==null;
 			
 			if (user!=null) {
 				
 				if( !passwordEncoder.matches(password, user.getPassword())) {
-					logger.error(logPrefix+"invalid password. user="+userId);
+					logger.error(logPrefix+"invalid password. username="+username);
 					invalidCredentials=true;
 				}
 								
 				String status=user.getStatus();					
 				if ("BLOCKED".equals(status)) {
-					logger.error(logPrefix+"status not active. userId="+userId+";status="+status);
+					logger.error(logPrefix+"status not active. username="+username+";status="+status);
 					throw new LockedException("user LOCKED");
-					//throw new DisabledException("user not enabled");
 				}
-				
-				
-				/*int loginErrs=Utils.int2Zero(client.getLoginErrs());
-				if (invalidCredentials) {
-					client.setLoginErrs(++loginErrs);
-					if (loginErrs>maxAuthErrors) {
-						logger.error(logPrefix+"client blocked.clientId="+clientId+";loginErrs="+loginErrs);
-						client.setBlockDate(now);
-						user.setStatus("BLOCKED");
-						throw new LockedException("client LOCKED");
-					}				
-				}
-				else {
-					client.setLoginErrs(0);
-				}*/
 			
 			}
 
@@ -346,7 +304,7 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 	    }
 		finally {		
 			if (user!=null) {
-				userRepo.update(user);
+				userRepo.save(user);
 			}
 		}
 
@@ -354,30 +312,21 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 
 	}
 	
-	@Transactional
-	public User authTwsClient(String userId, String password) {
-		User user = this.auth(userId, password);
-		if(user.getTwsClientActivationDate()==null){
-			logger.info("authTwsClient: tws client activation. userId="+userId);
-			user.setTwsClientActivationDate(new Date());
-			userRepo.update(user);
-		}
-		return user;
-	}	
+	
 	
 	@Transactional(readOnly=true)
-	public User loadUser(String userId)  {
+	public User loadUser(String username)  {
 		
 		String logPrefix="loadUser:";
-		logger.trace(logPrefix+"userId="+userId);
+		logger.trace(logPrefix+"username="+username);
 		
 		User user;
 		try {
-			user = userRepo.findByPk(userId);
+			user = userRepo.findById(username).get();
 			return user;
 		} 
 		catch(EmptyResultDataAccessException e) {
-			logger.warn(logPrefix+"not found: userId="+userId);
+			logger.warn(logPrefix+"not found: username"+username);
 			return null;		
 	    }		
 			

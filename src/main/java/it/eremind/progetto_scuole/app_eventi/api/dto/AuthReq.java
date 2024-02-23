@@ -2,41 +2,19 @@ package it.eremind.progetto_scuole.app_eventi.api.dto;
 
 import javax.validation.constraints.NotBlank;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
  * Corrisponde alla login user
  * @author Eri
  */
+@Data @NoArgsConstructor
 public class AuthReq {
 	
 	@NotBlank
-	private String userId;
+	private String username;
 	@NotBlank
 	private String password;
 	
-	@Override
-	public String toString(){
-		StringBuilder sb=new StringBuilder(512);
-		sb.append("{")
-		.append("userId:").append(userId).append(";")
-		.append("password.length:").append(password.length()).append(";")
-		.append("}");
-		return sb.toString();
-	}
-	
-	
-	public String getUserId() {
-		return userId;
-	}
-	public void setUserId(String userId) {
-		this.userId = userId;
-	}
-
-	public String getPassword() {
-		return password;
-	}
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-
 }

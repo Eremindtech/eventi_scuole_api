@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import it.eremind.progetto_scuole.app_eventi.api.dto.ApiError;
 import it.eremind.progetto_scuole.app_eventi.api.dto.ApiErrorDetail;
 import it.eremind.progetto_scuole.app_eventi.api.exception.ApiException;
-import it.eremind.progetto_scuole.app_eventi.api.security.HrvAuthentication;
+import it.eremind.progetto_scuole.app_eventi.api.security.ErmAuthentication;
 import it.eremind.progetto_scuole.app_eventi.api.security.WebSecConfig.ADHandler;
 import it.eremind.progetto_scuole.app_eventi.api.security.WebSecConfig.AuthFailureHandler;
 
@@ -59,7 +59,7 @@ public class ControllersExceptionHandler {
      */
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	@ExceptionHandler(value={ MethodArgumentNotValidException.class })
-	public final ResponseEntity<ApiError> handleUserValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request, HrvAuthentication auth) {
+	public final ResponseEntity<ApiError> handleUserValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request, ErmAuthentication auth) {
 	    
 		HttpHeaders headers = new HttpHeaders();
 	    HttpStatus status = HttpStatus.BAD_REQUEST;
@@ -81,7 +81,7 @@ public class ControllersExceptionHandler {
 	    	detail.setMessageKey(error.getDefaultMessage());
 	    	errors.add(detail);
 	    }
-	    logger.error("handleUserValidationExceptions: userId="+auth.getUser().getIdUser()+", request validation error: "+resBody.toString());
+	    logger.error("handleUserValidationExceptions: username="+auth.getUser().getUsername()+", request validation error: "+resBody.toString());
 
 	    return handleExceptionInternal(resBody, headers, status, request);
 	}
@@ -94,7 +94,7 @@ public class ControllersExceptionHandler {
      * @return
      */
 	@ExceptionHandler(value={ ApiException.class })
-	public final ResponseEntity<ApiError> handleApiExceptions(ApiException ex, HttpServletRequest request, HrvAuthentication auth) {
+	public final ResponseEntity<ApiError> handleApiExceptions(ApiException ex, HttpServletRequest request, ErmAuthentication auth) {
 	    
 		HttpHeaders headers = new HttpHeaders();
 	    
@@ -107,7 +107,7 @@ public class ControllersExceptionHandler {
 	    }
 	    HttpStatus status = HttpStatus.valueOf(resBody.getHttpStatus()==0?500:resBody.getHttpStatus());
 
-	    logger.error("handleApiExceptions: userId="+auth.getUser().getIdUser()+", httpStatus="+status+" resBody="+resBody.toString());
+	    logger.error("handleApiExceptions: userId="+auth.getUser().getUsername()+", httpStatus="+status+" resBody="+resBody.toString());
 	    
 	    return handleExceptionInternal(resBody, headers, status, request);
 	}
@@ -133,7 +133,7 @@ public class ControllersExceptionHandler {
      * @return
      */
 	@ExceptionHandler(value={ Exception.class })
-	public final ResponseEntity<ApiError> handleGenericException(Exception ex, HttpServletRequest request, HrvAuthentication auth) {
+	public final ResponseEntity<ApiError> handleGenericException(Exception ex, HttpServletRequest request, ErmAuthentication auth) {
 		
 		HttpHeaders headers = new HttpHeaders();
 	    HttpStatus status=HttpStatus.INTERNAL_SERVER_ERROR;
@@ -142,7 +142,7 @@ public class ControllersExceptionHandler {
 	    resBody.setMessage(ex.getMessage()==null?"Generic server error":ex.getMessage());
 	    resBody.setMessageKey(ApiError.GENERIC);
 	    
-	    logger.error("handleGenericException: userId="+auth.getUser().getIdUser()+", msg="+ex.getMessage(), ex);
+	    logger.error("handleGenericException: username="+auth.getUser().getUsername()+", msg="+ex.getMessage(), ex);
 	    
 	    return handleExceptionInternal(resBody, headers, status, request);
 	}

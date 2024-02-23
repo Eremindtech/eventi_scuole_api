@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -35,9 +36,10 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.jose.jwk.RSAKey;
 
-import it.orobicalab.hrv.dto.ApiError;
-import it.orobicalab.hrv.web.config.ConfigProps;
-import it.orobicalab.hrv.web.util.Utils;
+import it.eremind.progetto_scuole.app_eventi.api.config.AppConfig;
+import it.eremind.progetto_scuole.app_eventi.api.dto.ApiError;
+import it.eremind.progetto_scuole.app_eventi.api.util.Utils;
+
 
 
 @Configuration
@@ -47,72 +49,34 @@ public class WebSecConfig extends WebSecurityConfigurerAdapter {
 	@Autowired
 	private ObjectMapper objMapper;
 
-	@Value("${springdoc.api-docs.path:/api-docs}")
-	public static String API_DOCS_PATH="/api-docs";
+	@Autowired AppConfig appConfig;
 
-	public static final String REG_PATH="/registration";
-	public static final String AUTH_PATH="/auth";
-	public static final String APP_PATH="/hrv-app";
-	public static final String TWS_PATH="/tws-client";
-
-
-	// use nimbus tool to create keyset (json-web-key-generator.jar)
-	//private static final String JWK_SET_FILENAME="hrv-full-jwk-set.json";	
-	
 	private static final Logger logger = LoggerFactory.getLogger(WebSecConfig.class);
 
-
-	
 	private RSAKey rsaJWK;		
-	//private JWKSet jwkSet;
-	
-	
-
 
 	
 
-	
-	@Bean
-	public JwtDecoder jwtDecoder() throws JOSEException {
-		logger.debug("jwtDecoder() ...");
-		NimbusJwtDecoder jwtDecoder=NimbusJwtDecoder.withPublicKey(rsaJWK.toRSAPublicKey()).build();
-		SecMgr secMgr=secMgr();
-		secMgr.setJwtDecoder(jwtDecoder);
-		jwtDecoder.setJwtValidator(secMgr);
-		return jwtDecoder;
-	}	
-	
-	@Bean
-	public SecMgr secMgr() {
-		logger.debug("secMgr() ...");
-		return new SecMgr(rsaJWK);
-	}
-	
-	
-
-	
-	public WebSecConfig(ConfigProps configProps) {
-		logger.debug("<init>: configProps="+configProps);
-
-		String cfgDir=Utils.trim2Empty(configProps.getCfgDir());
+	@PostConstruct
+	public void pc() {
+		
+		String cfgDir=Utils.trim2Empty(appConfig.getCfgDir());
 		File fCfgDir=new File(cfgDir);
 		if (!fCfgDir.isDirectory())
 			throw new IllegalArgumentException("cfgDir not a Directory:"+cfgDir);
 		
-		String jwkSetFilename=Utils.trim2Empty(configProps.getJwkSetFilename());
-
-		String jwkKeyID=Utils.trim2Empty(configProps.getJwkKeyID());
+		String jwkSetFilename=Utils.trim2Empty(appConfig.getJwkSetFilename());
+		String jwkKeyID=Utils.trim2Empty(appConfig.getJwkKeyID());
 		File kpf=new File(fCfgDir, jwkSetFilename);
 		FileInputStream fis=null;
 		
 		JWKSet jwkSet=null;
 		
 		
-		logger.debug("loading jwkSetFile:"+kpf);
+		logger.debug("pc: loading jwkSetFile:"+kpf);
 		try {
 			fis=new FileInputStream(kpf);
 			jwkSet=JWKSet.load(fis);
-			
 		}
 		catch (Exception e) {
 			logger.error("Cannot load JWKSet:"+e.getMessage(), e);
@@ -122,8 +86,6 @@ public class WebSecConfig extends WebSecurityConfigurerAdapter {
 		finally {
 			if (fis!=null) try {fis.close();} catch (Exception ex) {}
 		}					
-
-		//logger.debug("<init>:jwkSet="+jwkSet);
 		
 		List<JWK> jwkLst = jwkSet.getKeys();
 		
@@ -147,6 +109,22 @@ public class WebSecConfig extends WebSecurityConfigurerAdapter {
 	}		
 	
 	
+		
+	@Bean
+	public JwtDecoder jwtDecoder() throws JOSEException {
+		logger.debug("jwtDecoder() ...");
+		NimbusJwtDecoder jwtDecoder=NimbusJwtDecoder.withPublicKey(rsaJWK.toRSAPublicKey()).build();
+		SecMgr secMgr=secMgr();
+		secMgr.setJwtDecoder(jwtDecoder);
+		jwtDecoder.setJwtValidator(secMgr);
+		return jwtDecoder;
+	}	
+	
+	@Bean
+	public SecMgr secMgr() {
+		logger.debug("secMgr() ...");
+		return new SecMgr(rsaJWK);
+	}
 	
 	
 	@Override
@@ -159,9 +137,8 @@ public class WebSecConfig extends WebSecurityConfigurerAdapter {
 		.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
         .csrf().disable()
 		.authorizeRequests(authorizeRequests -> authorizeRequests				
-				.mvcMatchers(AUTH_PATH+"/**", REG_PATH+"/**", API_DOCS_PATH+"/**").permitAll()
-				.mvcMatchers(APP_PATH+"/**").hasAuthority("ROLE_APP")
-				.mvcMatchers(TWS_PATH+"/**").hasAuthority("ROLE_TWS")
+				.mvcMatchers(AppConfig.AUTH_PATH+"/**", appConfig.getApiDocsPath()+"/**").permitAll()
+				.mvcMatchers(AppConfig.APP_PATH+"/**").hasAuthority("ROLE_APP")
 				.anyRequest().authenticated()
 				)
 		.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer
@@ -226,41 +203,6 @@ public class WebSecConfig extends WebSecurityConfigurerAdapter {
 		
 	}
 
-	
-	/*
-	//https://github.com/spring-projects/spring-security/issues/8092
-	@Bean
-	public JwtDecoder jwtDecoder(final OAuth2ResourceServerProperties properties, final ResourceLoader resourceLoader) throws Exception {
-		// this workaround is needed because spring boot doesn't support loading jwks from classpath/file (only http/https)
-		// using standard 'spring.security.oauth2.resourceserver.jwt.jwk-set-uri' configuration property
-		// relevant issue: https://github.com/spring-projects/spring-security/issues/8092
-		final String issuerUri = properties.getJwt().getIssuerUri();
-		final String jwkSetUri = properties.getJwt().getJwkSetUri();
-		final JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(properties.getJwt().getJwsAlgorithm());
 
-		final InputStream inputStream = resourceLoader.getResource(jwkSetUri).getInputStream();
-		final JWKSet jwkSet = JWKSet.load(inputStream);
-		final JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(jwkSet);
-		final ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
-		final JWSKeySelector<SecurityContext> jwsKeySelector = new JWSVerificationKeySelector<>(jwsAlgorithm, jwkSource);
-		jwtProcessor.setJWSKeySelector(jwsKeySelector);
-
-		// Spring Security validates the claim set independent from Nimbus
-		// copied from 'org.springframework.security.oauth2.jwt.NimbusJwtDecoder.JwkSetUriJwtDecoderBuilder.processor'
-		jwtProcessor.setJWTClaimsSetVerifier((claims, context) -> {
-		});
-
-		final OAuth2TokenValidator<Jwt> defaultValidator = JwtValidators.createDefaultWithIssuer(issuerUri);
-		final OAuth2TokenValidator<Jwt> clientIdValidator = new JwtClaimValidator<String>(CLIENT_ID_CLAIM, value -> !value.trim().isEmpty());
-		final OAuth2TokenValidator<Jwt> combinedValidator = new DelegatingOAuth2TokenValidator<>(defaultValidator, clientIdValidator);
-
-		final NimbusJwtDecoder nimbusJwtDecoder = new NimbusJwtDecoder(jwtProcessor);
-		nimbusJwtDecoder.setJwtValidator(combinedValidator);
-
-		return nimbusJwtDecoder;
-	}
-	*/
-	
-	
 
 }

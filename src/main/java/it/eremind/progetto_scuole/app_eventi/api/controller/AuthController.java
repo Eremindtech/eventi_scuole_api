@@ -12,15 +12,15 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
-import it.orobicalab.hrv.dto.ApiError;
-import it.orobicalab.hrv.dto.AuthRefreshReq;
-import it.orobicalab.hrv.dto.AuthReq;
-import it.orobicalab.hrv.dto.AuthRes;
-import it.orobicalab.hrv.web.exception.ApiException;
-import it.orobicalab.hrv.web.model.db.User;
-import it.orobicalab.hrv.web.security.HrvAuthentication;
-import it.orobicalab.hrv.web.security.SecMgr;
-import it.orobicalab.hrv.web.security.WebSecConfig;
+import it.eremind.progetto_scuole.app_eventi.api.config.AppConfig;
+import it.eremind.progetto_scuole.app_eventi.api.dto.ApiError;
+import it.eremind.progetto_scuole.app_eventi.api.dto.AuthRefreshReq;
+import it.eremind.progetto_scuole.app_eventi.api.dto.AuthReq;
+import it.eremind.progetto_scuole.app_eventi.api.dto.AuthRes;
+import it.eremind.progetto_scuole.app_eventi.api.exception.ApiException;
+import it.eremind.progetto_scuole.app_eventi.api.entity.User;
+import it.eremind.progetto_scuole.app_eventi.api.security.ErmAuthentication;
+import it.eremind.progetto_scuole.app_eventi.api.security.SecMgr;
 import java.text.ParseException;
 import java.util.Date;
 
@@ -42,13 +42,13 @@ public class AuthController {
 
 		
 		
-	@RequestMapping(value = WebSecConfig.AUTH_PATH+"/app", method = RequestMethod.POST)
-	public ResponseEntity<AuthRes> authApp(@Valid @RequestBody AuthReq req)  {
+	@RequestMapping(value = AppConfig.AUTH_PATH, method = RequestMethod.POST)
+	public ResponseEntity<AuthRes> auth(@Valid @RequestBody AuthReq req)  {
 		
-		String logPrefix="authApp:";						
+		String logPrefix="auth:";						
 		logger.debug(logPrefix+"req="+req.toString());
 
-		String userId=req.getUserId();		
+		String userId=req.getUsername();		
 		User user=secMgr.auth(userId, req.getPassword());
 		logger.debug(logPrefix+"user="+userId);
 		
@@ -56,7 +56,7 @@ public class AuthController {
 		String refreshToken=null;
 		long exp=0;
 		try {
-			final SignedJWT jwt=secMgr.generateClientToken(user, User.CLIENT_TYPE_APP);
+			final SignedJWT jwt=secMgr.generateClientToken(user);
 			token = jwt.serialize();
 			JWTClaimsSet claimSet=jwt.getJWTClaimsSet();
 			if (claimSet!=null) {
@@ -65,7 +65,7 @@ public class AuthController {
 					exp=expDate.getTime();
 				}
 			}
-			final SignedJWT refresJwt=secMgr.generateRefreshToken(user, User.CLIENT_TYPE_APP);
+			final SignedJWT refresJwt=secMgr.generateRefreshToken(user);
 			refreshToken = refresJwt.serialize();
 		} 
 		catch (JOSEException|ParseException e) {
@@ -80,21 +80,21 @@ public class AuthController {
 	
 	}	
 	
-	@RequestMapping(value = WebSecConfig.AUTH_PATH+"/refresh/app", method = RequestMethod.POST)
-	public ResponseEntity<AuthRes> authAppRefresh(@Valid @RequestBody AuthRefreshReq req) {
+	@RequestMapping(value = AppConfig.AUTH_PATH+"/refresh", method = RequestMethod.POST)
+	public ResponseEntity<AuthRes> authRefresh(@Valid @RequestBody AuthRefreshReq req) {
 		
-		String logpfx="authAppRefresh:";
+		String logpfx="authRefresh:";
 		logger.debug(logpfx+", refreshToken="+req.getRefreshToken());
-		HrvAuthentication auth=this.secMgr.refreshAuth(req.getRefreshToken());
+		ErmAuthentication auth=this.secMgr.refreshAuth(req.getRefreshToken());
 		User user=auth.getUser();
-		logger.debug(logpfx+", idUser="+user.getIdUser());
+		logger.debug(logpfx+", username="+user.getUsername());
 
 		
 		String token=null;
 		String refreshToken=null;
 		long exp=0;
 		try {
-			final SignedJWT jwt=secMgr.generateClientToken(user, User.CLIENT_TYPE_APP);
+			final SignedJWT jwt=secMgr.generateClientToken(user);
 			token = jwt.serialize();
 			JWTClaimsSet claimSet=jwt.getJWTClaimsSet();
 			if (claimSet!=null) {
@@ -103,7 +103,7 @@ public class AuthController {
 					exp=expDate.getTime();
 				}
 			}
-			final SignedJWT nRefreshJwt=secMgr.generateRefreshToken(user, User.CLIENT_TYPE_APP);
+			final SignedJWT nRefreshJwt=secMgr.generateRefreshToken(user);
 			refreshToken = nRefreshJwt.serialize();
 		} 
 		catch (JOSEException|ParseException e) {
@@ -117,44 +117,7 @@ public class AuthController {
 		return ResponseEntity.ok(res);
 	
 	}	
-	
-	@RequestMapping(value = WebSecConfig.AUTH_PATH+"/tws-client", method = RequestMethod.POST)
-	public ResponseEntity<AuthRes> authTwsClient(@Valid @RequestBody AuthReq req)  {
-		
-		String logPrefix="authTwsClient:";						
-		logger.debug(logPrefix+"req="+req.toString());
 
-		String userId=req.getUserId();		
-		User user=secMgr.authTwsClient(userId, req.getPassword());
-		logger.debug(logPrefix+" user="+userId);
-		
-		String token=null;
-		String refreshToken=null;
-		long exp=0;
-		try {
-			final SignedJWT jwt=secMgr.generateClientToken(user, User.CLIENT_TYPE_TWS);
-			token = jwt.serialize();
-			JWTClaimsSet claimSet=jwt.getJWTClaimsSet();
-			if (claimSet!=null) {
-				Date expDate=claimSet.getExpirationTime();
-				if (expDate!=null) {
-					exp=expDate.getTime();
-				}
-			}
-			final SignedJWT refreshJwt=secMgr.generateRefreshToken(user, User.CLIENT_TYPE_TWS);
-			refreshToken = refreshJwt.serialize();
-		} 
-		catch (JOSEException|ParseException e) {
-			logger.error(logPrefix+e.getMessage(), e);
-			ApiError apiError=new ApiError(ApiError.GENERIC, "Internal server error");
-			apiError.setHttpStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-			throw new ApiException(apiError);			
-		}						
-
-		final AuthRes res=new AuthRes(token, exp, refreshToken);
-		return ResponseEntity.ok(res);
-	
-	}	
 	
     
 }
