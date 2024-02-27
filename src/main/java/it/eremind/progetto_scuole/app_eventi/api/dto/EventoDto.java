@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import it.eremind.progetto_scuole.app_eventi.api.config.AppConfig;
 import lombok.Data;
@@ -13,13 +16,16 @@ import lombok.NoArgsConstructor;
 public class EventoDto {
 
     Long id;
+    @NotEmpty
     String nome;
     String descr;
-    @Schema(type="string", example = AppConfig.DATE_TIME_SWAGGER)
+    @Schema(type="string", example = AppConfig.DATE_TIME_SWAGGER) @NotEmpty
     LocalDateTime dataEv;
+    @NotEmpty
     BigDecimal spesa;
-	LocalDateTime dataPagamento;
+    @NotNull
     UserDto creatore;
-    List<UserDto> partecipantiList;
+    @NotEmpty
+    List<PartecipanteDto> partecipantiList;
 
 }

@@ -33,7 +33,7 @@ public class Evento {
     BigDecimal spesa;
 	LocalDateTime dataPagamento;
 
-	@OneToMany(fetch = FetchType.LAZY, mappedBy="user")
-    List<User> partecipantiList;
+	@OneToMany(fetch = FetchType.LAZY)
+    List<Partecipante> partecipantiList;
 
 }

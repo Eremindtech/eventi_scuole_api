@@ -11,10 +11,11 @@ import lombok.Setter;
 
 
 @Entity
-@Getter @Setter
+@Getter @Setter @NoArgsConstructor
 public class User {
 	
-	@Id
+
+    @Id
 	private String username;
 	private String password;
 	private String email;
