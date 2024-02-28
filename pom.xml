@@ -8,7 +8,7 @@
 		<version>2.7.7</version>
 	</parent>
 	<groupId>it.eremind.progetto_scuole.app_eventi</groupId>
-	<artifactId>api</artifactId>
+	<artifactId>app_eventi_api</artifactId>
 	<packaging>war</packaging>
 	<version>0.0.1</version>
 	<name>app_eventi_api</name>

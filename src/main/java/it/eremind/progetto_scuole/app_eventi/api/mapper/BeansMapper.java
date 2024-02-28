@@ -30,7 +30,7 @@ public class BeansMapper {
 	}
 
 
-	private static List<UserDto> toDtoUserL(List<User> dbL) {
+	public static List<UserDto> toDtoUserL(List<User> dbL) {
 		List<UserDto> dtoL=new ArrayList<>();
 		dbL.forEach(db->{
 			dtoL.add(toDto(db));
@@ -38,14 +38,14 @@ public class BeansMapper {
 		return dtoL;
 	}
 
-	private static UserDto toDto(User db) {
+	public static UserDto toDto(User db) {
 		UserDto dto=new UserDto();
 		BeanUtils.copyProperties(db, dto);
 		return dto;
 	}
 
 
-	private static List<PartecipanteDto> toDtoPartecipanteL(List<Partecipante> dbL) {
+	public static List<PartecipanteDto> toDtoPartecipanteL(List<Partecipante> dbL) {
 		List<PartecipanteDto> dtoL=new ArrayList<>();
 		dbL.forEach(db->{
 			PartecipanteDto dto=new PartecipanteDto();

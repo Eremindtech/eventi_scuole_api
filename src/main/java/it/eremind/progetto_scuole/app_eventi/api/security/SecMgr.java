@@ -320,15 +320,7 @@ public class SecMgr implements OAuth2TokenValidator<Jwt>, Converter<Jwt, Abstrac
 		String logPrefix="loadUser:";
 		logger.trace(logPrefix+"username="+username);
 		
-		User user;
-		try {
-			user = userRepo.findById(username).get();
-			return user;
-		} 
-		catch(EmptyResultDataAccessException e) {
-			logger.warn(logPrefix+"not found: username"+username);
-			return null;		
-	    }		
+		return userRepo.findById(username).orElse(null);	
 			
 	}
 

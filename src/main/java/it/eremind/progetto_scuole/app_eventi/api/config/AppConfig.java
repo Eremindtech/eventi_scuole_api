@@ -5,6 +5,9 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Enumeration;
 import java.util.TimeZone;
 
@@ -28,6 +31,11 @@ import org.springframework.web.util.UrlPathHelper;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedGenerator;
 import com.mysql.cj.jdbc.AbandonedConnectionCleanupThread;
@@ -64,6 +72,7 @@ public class AppConfig {
 
 	@PostConstruct
 	public void pc(){
+		System.out.println("AppConfig-postContruct: cfgDir="+cfgDir);
 		logger.info("pc: cfgDir="+cfgDir+", AUTH_PATH="+AUTH_PATH+", APP_PATH="+APP_PATH+", apiDocsPath="+apiDocsPath
 			+", jwkSetFilename="+jwkSetFilename);
 	}
@@ -77,18 +86,18 @@ public class AppConfig {
 	@Primary
 	@Bean
 	public ObjectMapper objectMapper(){
-
 		ObjectMapper mapper = new ObjectMapper();
-	    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-	    mapper.enable(SerializationFeature.INDENT_OUTPUT);
-	    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-	    //StdDateFormat is ISO8601 since jackson 2.9
-	    mapper.setDateFormat(new SimpleDateFormat(DATE_TIME_FORMAT));
-	    mapper.setTimeZone(TimeZone.getDefault());
-	    //mapper.setDateFormat(new SimpleDateFormat(StdDateFormat.DATE_FORMAT_STR_ISO8601));
-	    //mapper.findAndRegisterModules();
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		// For java time dates serialization
+		JavaTimeModule jtModule=new JavaTimeModule();
+		jtModule.addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ISO_LOCAL_DATE));
+		jtModule.addSerializer(LocalDate.class, new LocalDateSerializer(DateTimeFormatter.ISO_LOCAL_DATE));
+		jtModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern(DATE_TIME_FORMAT)));
+		jtModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern(DATE_TIME_FORMAT)));
+		mapper.registerModule(jtModule);
+		mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 	    return mapper;
-		
 	}
 	
 	
