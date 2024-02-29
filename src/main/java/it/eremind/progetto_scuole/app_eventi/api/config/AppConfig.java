@@ -62,6 +62,8 @@ public class AppConfig {
 	public final static String DATE_TIME_SWAGGER="2022-03-15 12:30:22";
 	public static final String DATE_TIME_FORMAT="yyyy-MM-dd HH:mm:ss";
 
+	public static final String CURRENCY_SWAGGER = "12.50";
+
 
 	@Value("${cfgDir:cfg}")
 	private String cfgDir;

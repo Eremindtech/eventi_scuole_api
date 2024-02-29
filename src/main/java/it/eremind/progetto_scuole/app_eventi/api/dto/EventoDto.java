@@ -23,7 +23,7 @@ public class EventoDto {
     String descr;
     @Schema(type="string", example = AppConfig.DATE_TIME_SWAGGER) @NotNull @FutureOrPresent
     LocalDateTime dataEv;
-    @NotNull @Positive
+    @Schema(example = AppConfig.CURRENCY_SWAGGER) @NotNull @Positive
     BigDecimal spesa;
     @NotNull
     UserDto creatore;

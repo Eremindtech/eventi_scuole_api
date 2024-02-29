@@ -62,13 +62,19 @@ public class EventiService {
 			partDbL.add(partDb);
 		});
 		evDb.setPartecipantiList(partDbL);
-		evDb.setDataIns(LocalDateTime.now());
+		LocalDateTime now=LocalDateTime.now();
+		evDb.setDataIns(now);
 		evDb=this.evRepo.save(evDb);
 
 		// Salvo partecipanti
 		for(int i=0;i<partDbL.size();i++){
 			Partecipante p=partDbL.get(i);
 			p.setEvento(evDb);
+			if(p.getUser().getUsername().equals(creatore.getUsername())){
+				// Creatore paga di default
+				log.debug("insertEvento: id="+ev.getId()+", creatore="+creatore.getUsername()+", presente tra i partecipanti -> pagamento automatico");
+				p.setDataPagamento(now);
+			}
 			p=this.partRepo.save(p);
 			partL.get(i).setIdPartecipante(p.getId());
 		}
@@ -80,7 +86,7 @@ public class EventiService {
 		return ev;
 	}
 
-
+	@Transactional(readOnly = true)
 	public List<UserDto> findUsers() {
 		List<User> dbL=this.uRepo.findAll();
 		List<UserDto> dtoL=BeansMapper.toDtoUserL(dbL);
